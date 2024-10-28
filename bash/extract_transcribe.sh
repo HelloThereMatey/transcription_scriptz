@@ -5,6 +5,18 @@ cd "$(dirname "$0")"
 # Path to the JSON file containing the API key
 API_KEY_FILE="keyz.json"
 
+# Check if the API key file exists
+if [ ! -f "$API_KEY_FILE" ]; then
+  echo "API key file not found. Please enter your OpenAI API key:"
+  read -r api_key
+
+  # Create the JSON file with the API key
+  echo "{\"openai\": \"$api_key\"}" > "$API_KEY_FILE"
+  echo "API key saved to $API_KEY_FILE"
+else
+    echo "API key file found."
+fi
+
 # Check if the JSON file exists
 if [ ! -f "$API_KEY_FILE" ]; then
   echo "API key file does not exist: $API_KEY_FILE"
