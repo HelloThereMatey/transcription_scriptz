@@ -36,7 +36,10 @@ Below is a list of required and recommended packages to install. Some are not ac
     choco install ffmpeg
     ```
 
-### Run Script
+- **Open AI API key:** You need an API key for open ai to use the whisper api. It is free though. Login at the link below using you open ai account and follow the instructions.
+  - [[open ai API keys](https://platform.openai.com/api-keys)]
+
+### Run extract_transcribe Script
 
 - Running the script is simple. First set the working directory (wd) to the folder containing the script, e.g:
   ```powershell
@@ -46,3 +49,5 @@ Below is a list of required and recommended packages to install. Some are not ac
   ```powershell
   .\extract_transcribe.ps1
   ```
+- On the first run you will be prompted in the terminal to enter your open AI API key. Copy and paste it into the terminal when prompted and hit enter.
+- Subsequent runs will not need you to paste the key. It is saved to "keyz.json" file when you paste it the first time.
