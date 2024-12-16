@@ -37,7 +37,6 @@ function Create-OutputDirectory {
     
     try {
         if ($dirName) {
-            # Use Documents folder as base path for safety
             $basePath = [System.Environment]::GetFolderPath('MyDocuments')
             $outputPath = Join-Path $basePath $dirName
         }
@@ -45,14 +44,12 @@ function Create-OutputDirectory {
             $outputPath = Select-OutputDirectory
         }
 
-        # Ensure the path doesn't contain any invalid characters
         $outputPath = [System.IO.Path]::GetFullPath($outputPath)
 
         if (-not (Test-Path $outputPath)) {
             New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
         }
         
-        # Test write permissions
         $testFile = Join-Path $outputPath "test.txt"
         try {
             [System.IO.File]::WriteAllText($testFile, "test")
@@ -79,12 +76,7 @@ function Download-Audio {
     
     try {
         Write-Host "Starting download for URL: $url" -ForegroundColor Yellow
-
-        # Clean and quote the output path
-        $sanitizedPath = """$($outputDir -replace '["\[\]()]', '')"""
-        Write-Host "Sanitized output path: $sanitizedPath" -ForegroundColor Cyan
         
-        # yt-dlp command with best audio quality, convert to mp3
         $arguments = @(
             $url,
             '--no-playlist',
@@ -93,42 +85,22 @@ function Download-Audio {
             '--audio-quality', '0',
             '--output', "`"$outputDir\$iterator`_%(title)s.%(ext)s`"",
             '--format', 'bestaudio',
-            '--windows-filenames',  # Ensure Windows-compatible filenames
-            '--verbose',            # Add verbose output
-            '--progress'           # Show download progress
+            '--windows-filenames'
         )
+        
         Write-Host "yt-dlp arguments: $($arguments -join ' ')" -ForegroundColor Cyan
         
-        # Create temporary error log file
-        $errorLog = Join-Path $env:TEMP "yt-dlp-error.log"
-        Write-Host "Temporary error log file: $errorLog" -ForegroundColor Blue
+        # Use Start-Process instead of System.Diagnostics.Process
+        $result = Start-Process -FilePath "yt-dlp" -ArgumentList $arguments -NoNewWindow -Wait -PassThru
         
-        $processInfo = New-Object System.Diagnostics.ProcessStartInfo
-        $processInfo.FileName = "yt-dlp"
-        $processInfo.RedirectStandardError = $true
-        $processInfo.RedirectStandardOutput = $true
-        $processInfo.UseShellExecute = $false
-        $processInfo.Arguments = $arguments -join ' '
+        Write-Host "yt-dlp process completed with exit code: $($result.ExitCode)" -ForegroundColor Cyan
         
-        $process = New-Object System.Diagnostics.Process
-        $process.StartInfo = $processInfo
-        
-        Write-Host "Starting yt-dlp process..." -ForegroundColor DarkYellow
-        $process.Start() | Out-Null
-        
-        $stdout = $process.StandardOutput.ReadToEnd()
-        $stderr = $process.StandardError.ReadToEnd()
-        $process.WaitForExit()
-        
-        Write-Host "yt-dlp process completed with exit code: $($process.ExitCode)" -ForegroundColor Cyan
-        
-        if ($process.ExitCode -eq 0) {
+        if ($result.ExitCode -eq 0) {
             Write-Host "Successfully downloaded audio from: $url" -ForegroundColor Green
             return $true
         }
         else {
             Write-Host "Failed to download audio from: $url" -ForegroundColor Red
-            Write-Host "Error details: $stderr" -ForegroundColor Yellow
             return $false
         }
     }
@@ -143,13 +115,11 @@ function Main {
         [string]$outputDirName
     )
 
-    # Check if running with admin rights
     $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
     if (-not $isAdmin) {
         Write-Host "Note: Running without admin rights. Some locations might be inaccessible." -ForegroundColor Yellow
     }
 
-    # Check if yt-dlp is installed
     try {
         $null = Get-Command yt-dlp -ErrorAction Stop
     }
@@ -159,14 +129,11 @@ function Main {
         exit
     }
 
-    # Create output directory
     $outputDir = Create-OutputDirectory -dirName $outputDirName
     Write-Host "Audio files will be saved to: $outputDir" -ForegroundColor Cyan
 
-    # Select input file
     $filePath = Select-InputFile
     
-    # Read URLs from file
     try {
         $urls = Get-Content $filePath | Where-Object { $_.Trim() -ne "" }
     }
@@ -180,7 +147,6 @@ function Main {
         exit
     }
 
-    # Download audio for each URL
     $total = $urls.Count
     $successful = 0
     $failed = @()
@@ -201,7 +167,6 @@ function Main {
         Write-Progress -Activity "Downloading YouTube Audio" -Status "$($i + 1) of $total completed" -PercentComplete ((($i + 1) / $total) * 100)
     }
 
-    # Print summary
     Write-Host "`nDownload complete!" -ForegroundColor Green
     Write-Host "Successfully downloaded: $successful/$total audio files" -ForegroundColor Cyan
     Write-Host "Files saved to: $outputDir" -ForegroundColor Cyan
