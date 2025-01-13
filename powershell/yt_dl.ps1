@@ -135,7 +135,8 @@ function Main {
     $filePath = Select-InputFile
     
     try {
-        $urls = Get-Content $filePath | Where-Object { $_.Trim() -ne "" }
+        # Force array creation with @() operator
+        $urls = @(Get-Content $filePath | Where-Object { $_.Trim() -ne "" })
     }
     catch {
         Write-Host "Error reading file: $_" -ForegroundColor Red
@@ -151,7 +152,7 @@ function Main {
     $successful = 0
     $failed = @()
 
-    Write-Host "`nFound $total URLs to process" -ForegroundColor Cyan
+    Write-Host "`nFound $total URLs to process: `n$urls" -ForegroundColor Cyan
     
     foreach ($i in 0..($total - 1)) {
         $url = $urls[$i]
